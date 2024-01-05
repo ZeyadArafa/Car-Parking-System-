@@ -21,3 +21,7 @@ Cars passing through the entrance are allowed immediate access; otherwise, a tic
 
 
 ![215566999-0fc9f616-95e6-4a35-9aef-fca082426b5e](https://github.com/ZeyadArafa/Car-Parking-System-/assets/121558294/34068067-54eb-42e7-a8d1-a95c4e01df67)
+
+
+![image](https://github.com/ZeyadArafa/Car-Parking-System-/assets/121558294/58957fcb-4b69-449c-a65f-4b4bd45c195e)
+
