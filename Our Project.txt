@@ -1,0 +1,487 @@
+library ieee;
+use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
+
+entity parking_system is
+	 GENERIC(
+		  clk_freq   :  INTEGER := (40));
+    port (
+        ticket_in : in integer;
+        enter_time_in : in integer;
+        exit_time_in : in integer;
+        clk : in std_logic;
+        payment_out : out integer;
+        full_out : out std_logic;
+        id_valid : in std_logic;
+        car_entering : in std_logic;
+        car_exiting : in std_logic;
+        gate_open : out std_logic;
+		  ----------------------------------------------
+        rst: in std_logic;
+        occupy: inout std_logic_vector(49 downto 0);  -- modified range of occupy vector
+        led: out std_logic_vector(49 downto 0);  -- modified range of led vector
+        free_count: inout natural;
+        occupied_count: inout natural;
+        temperature: in natural;  -- new input port for temperature sensor
+        fire: out std_logic;  -- new output port for fire indicator
+        coffee_button: in std_logic;  -- new input port for coffee button
+        hot_chocolate_button: in std_logic;  -- new input port for hot chocolate button
+        ice_cream_button: in std_logic;  -- new input port for ice cream button
+        water_button: in std_logic;  -- new input port for water button
+        coffee_ready: inout std_logic;  -- new output port for coffee ready indicator
+        hot_chocolate_ready: inout std_logic;  -- new output port for hot chocolate ready indicator
+        ice_cream_ready: inout std_logic;  -- new output port for ice cream ready indicator
+        water_ready: inout std_logic;  -- new output port for water ready indicator
+        money_received: in std_logic;  -- new input port for money received indicator
+        change_amount: out natural;  -- new output port for change amount
+		  ----------------------------------------------
+        seg : out std_logic_vector(6 downto 0);
+        seg2 : out std_logic_vector(6 downto 0);
+		  ----------------------------------------------            
+		  sensor_pw  :  IN   STD_LOGIC_VECTOR(49 DOWNTO 0);    
+		  carexist   :  OUT  STD_LOGIC_VECTOR(49 DOWNTO 0);
+		  placement  :  IN   natural Range 0 to 49;
+		  check      :  out  integer;
+		  check_count      :  out  natural := 0;
+		  distance   :  INOUT  STD_LOGIC_VECTOR(7 DOWNTO 0)
+    );
+end entity parking_system;
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+architecture behavior of parking_system is                           //this part whill change the data type from bit and std_logis to integer data type
+    type guest is record 
+        ticket : integer;
+        enter_time : integer;
+        exit_time : integer;	  
+    end record;
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+type guest_array is array (natural range <>) of guest;
+    
+    constant max_guests : natural := 100;                             //this line will count maximum number of guests
+    signal guests : guest_array(0 to max_guests-1);                   //this line will make array of guests
+    signal guest_count : natural := 0;                                //this line will count the  number of guests currently in the garage
+	 signal guest_charge : real;
+	 -------------------------------------------------
+    -- constants for drink prices
+    constant coffee_price: natural := 50;                             // this part will valvculate the price oif the product as intial value
+    constant hot_chocolate_price: natural := 75;                      // this part will valvculate the price oif the product as intial value
+    constant ice_cream_price: natural := 100;                         // this part will valvculate the price oif the product as intial value
+    constant water_price: natural := 25;                              // this part will valvculate the price oif the product as intial value
+
+    -- internal signal for current drink selection
+    signal current_drink: std_logic_vector(2 downto 0);               // this part will the customer will decide which drink to choose
+	 -------------------------------------------------
+	???????????????????????????????????????????????? SIGNAL sensor_pw_prev  :  STD_LOGIC_VECTOR(49 DOWNTO 0);
+
+
+          
+------------------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+begin
+    
+    -- process to handle a new guest entering the garage without id
+    process (ticket_in, enter_time_in, id_valid, car_entering, clk)
+    begin
+			if (clk'event and clk = '1') then
+				if ticket_in /= 0 and guest_count < max_guests and id_valid='0' and car_entering ='1' and car_exiting ='0' then     ///this part will check if car infort of the gate and has a vaild ticket  and the parking contain empty space and the current car is not found in the parking and all theses condition is okay so the parking gate will open and let the car enter and decrease the number of empty slots inthe parking  
+					guests(guest_count).ticket <= ticket_in;             // here the customer ticket will save to the customer data base in the paring system
+					guests(guest_count).enter_time <= enter_time_in;     // here the entering time ((for example he enter at 9 am)) will save to customer data base (( customer entering time)) in the parking system ((will sve as he enter at 9 am)) 
+					guests(guest_count).exit_time <= 0;                  // here the exit time (( he leave at 10 am)) will save to the customer data base in the parking system ((it will save as the customer leave at 10 am))
+					payment_out <= 0;                                    // here the customer hasnot pay any thing so it will be saved in the parking syatem as the pay +0
+					guest_count <= guest_count + 1;                      // here this part the parking system will increment the number of full space in the parking system 
+					gate_open <='1';                                     // here this part the paking gate will open indicate to the car enter the the parking system and it will be saved in the customer date base in the parking system (( the customer enter the parking and he is still in the parking  ))
+					check_count <= guest_count;                          // here this part will give the customer a number in the parking system and this number indicate the number of the space in the paking (( for example the parking sytem give the customer number 1 this number will be the number of the slot the customer will park his car in and it will be save in the parking syrem that the slot slot number is occiupied yhe cusntomet 1 so the paking system will remove this slot from empty space in the parking the parking system data base and will check the number of empty space founf in the parking and it will be saved in the the main parking system data base  
+					
+				elsif  guest_count < max_guests and id_valid='1' and car_entering ='1' and car_exiting ='0' then                     // this part will check if the customer has a vaild ticket id the system of the parking will increment the number of full space in the parking so the parking gate will open and let the car enter
+					guest_count <= guest_count + 1;                      // here the paking system will increment the number of th full space in the parking system 
+					gate_open <='1';                                     // here this part if the last line is ok the parking system will open the gate of the parking system an let the car enter 
+					check_count <= guest_count;                          // here this part will give the customer a number in the parking system and this number indicate the number of the space in the paking (( for example the parking sytem give the customer number 1 this number will be the number of the slot the customer will park his car in and it will be save in the parking syrem that the slot slot number is occiupied yhe cusntomet 1 so the paking system will remove this slot from empty space in the parking the parking system data base and will check the number of empty space founf in the parking and it will be saved in the the main parking system data base  
+					
+				elsif id_valid='1' and car_entering ='0' and car_exiting ='1' then                                                    // this port will check if the custumer which is in the  parking ((current customer)) has a valid id and he wants to  exit the parking so the parking system will decrement the number of full spaces and the gate open
+					guest_count <= guest_count - 1;                      // here this part will decfement the number of full space in th parking system 
+					gate_open <='1';                                     // here this part if the last line is ok the parking system will open the gate of the parking system an let the car enter 
+					check_count <= guest_count;                          // here this part will give the customer a number in the parking system and this number indicate the number of the space in the paking (( for example the parking sytem give the customer number 1 this number will be the number of the slot the customer will park his car in and it will be save in the parking syrem that the slot slot number is occiupied yhe cusntomet 1 so the paking system will remove this slot from empty space in the parking the parking system data base and will check the number of empty space founf in the parking and it will be saved in the the main parking system data base
+					
+				elsif (id_valid='1' or id_valid='0') and car_entering ='0' and car_exiting ='0' then                                  // this part will check if there is no new customer of exist customer the gate will close	
+						gate_open <='0';                             //here this part the paking system system gate will check if there is no new customer of exist customer the gate will close	
+
+					
+					else                                                                                                          // this part wll check if none of the previous conditions is true so if we are at night and the parking will close and the manager of the parking system will see if there is a car in the parking or not he will see if the current car has a vaild id and the car found in the parking he willask the onwer of the car to take it out the the parking and he onwer of the car in parking will exit the parking the system of parking will calculate the differece between the enter time and the exit time and calculate the amount of money to pay 
+                                      for i in 0 to max_guests -1 loop
+				if ticket_in /= 0 and id_valid='0' and car_exiting ='1' and car_entering ='0' and guests(i).ticket = ticket_in then
+					guests(i).exit_time <= exit_time_in;                 //here this part the parking system  will save the customer exit time in the customer data base        
+					payment_out <= (exit_time_in - (guests(i).enter_time)) * 2;         // here this part the parking system will calculate the differece between the entering time and the exiting time and the diference between them the parking system will muiltply it with the cost of an hour 
+					guest_count <= guest_count - 1;                      // here this part the parking system will decrement the number of full space 
+					gate_open <='1';                                     // here this part if the last line is ok the parking system will open the gate of the parking system an let the car enter 
+					check_count <= guest_count;                          // here this part will give the customer a number in the parking system and this number indicate the number of the space in the paking (( for example the parking sytem give the customer number 1 this number will be the number of the slot the customer will park his car in and it will be save in the parking syrem that the slot slot number is occiupied yhe cusntomet 1 so the paking system will remove this slot from empty space in the parking the parking system data base and will check the number of empty space founf in the parking and it will be saved in the the main parking system data base
+					end if;
+							end loop;
+				end if;
+			end if;
+
+    end process;
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+ PROCESS(clk,rst)                                                 //This process is sensitive to changes in the clk (clock) and rst (reset) signals.
+    VARIABLE cm_timecount  :  INTEGER := 0;                       -- here this part is to Variable Declarations:
+    VARIABLE cm_counter      :  INTEGER := 0;                     -- here this part is to Variable Declarations:
+	 type dist_array is array (0 to 49) of std_logic_vector(7 downto 0);      -- here this part is to Array Declaration: dist_array is a type definition for an array of 50 elements, where each element is a std_logic_vector of length 8 (8 bits).
+	 variable distances: dist_array;                          -- here this part distances is a variable of type dist_array, representing a collection of 50 distances.
+	 BEGIN
+     IF(rst = '1') THEN                                           -- here this part we see if the rst is equal to 1 if true the led  
+		 led <= (others => '1');
+       free_count <= 50;                                          -- set free count to 50  
+       occupied_count <= 0;                                       -- occupied count to 0
+       fire <= '0';                                               -- reset fire indicator to 0
+       coffee_ready <= '0';                                       -- reset coffee ready indicator to 0
+       hot_chocolate_ready <= '0';                                -- reset hot chocolate ready indicator to 0
+       ice_cream_ready <= '0';                                    -- reset ice cream ready indicator to 0
+       water_ready <= '0';                                        -- reset water ready indicator to 0
+       change_amount <= 0;                                        -- reset change amount to 0	  
+       cm_timecount := 0;                                         -- here this part cm_timecount is rest to 0                       
+       cm_counter := 0;                                           -- here this part cm_counter is rest to 0    
+       distance <= (OTHERS => '0');                               -- here this part distance vector are set to '0'.
+	    carexist <= (OTHERS => '0');                          -- here this part carexist vector are set to '0'.	
+		 occupy <= (OTHERS => '0');                       -- here this part occupy vector are set to '0'.
+     ELSIF(clk'EVENT AND clk = '1') THEN                          -- here this part is true when there is a rising edge of the clock (clk). it happen when the if condition is not excueed earlier in the code.
+			 sensor_pw_prev(placement) <= sensor_pw(placement);        -- here in this part It saves the current state of the sensor (sensor_pw) at a specific location (placement) into a storage array (sensor_pw_prev).                       
+			 IF(sensor_pw(placement) = '1' AND (placement + 1) <= guest_count) THEN     -- here in this condition it checks whether the sensor at the specified location is active (equals '1') and whether the next location (placement + 1) is within the total guest count range (guest_count).                        
+				IF(cm_timecount < (29/1000000)*clk_freq) THEN      -- here in this part it Checks if a short time period has elapsed. The time period is calculated based on the clock frequency (clk_freq)       
+				  cm_timecount := cm_timecount + 1;                -- here in this part  cm_timecount is incremented if the condition is true.       
+				ELSE                                              
+				  cm_timecount := 0;                               -- here in this part the time counter is  Reset .                           
+				  cm_counter := cm_counter + 1;                    -- here in this part a distance counter is Increment .                 
+				END IF;
+			 END IF;
+			 IF(sensor_pw_prev(placement) = '1' AND sensor_pw(placement) = '0' AND (placement + 1) <= guest_count) THEN       -- here in this part the if condition is going to check three things:   THE FIRST ONE IS : The previous state of the sensor at the specified location was '1'.     THE SECOND ONE IS : The current state of the sensor at the specified location is '0'.       	THE LAST ONE IS : The next location (placement + 1) is within the total guest count range (guest_count).
+				  check <= cm_counter;                             -- here in this part it Saves the current value of the distance counter (cm_counter) for later reference.
+				  distance <= std_logic_vector(to_unsigned(cm_counter,distance'LENGTH));         -here in this part we are going to Converts the distance counter to a std_logic_vector.
+				  distances(placement) := distance;                -- here in this part we will Updates the distances array with the calculated distance at the current location.
+				  if(cm_counter < 20000) then                      -- here in this part we will checks if the distance counter is less than 20000. If then the following is going to be done 
+					 carexist(placement) <= '1';               -- here in this part Sets an carexist indicator () to '1'
+					 occupy(placement) <= '1';                 -- here in this part Sets an occupy indicator () to '1'
+					 led(placement) <= '0';                    -- here in this part the LED will Turns off at the current location.
+					 occupied_count <= occupied_count + 1;     -- here in this part Updates and increment occupied_count 
+					 free_count <= free_count - 1;             -- here in this part Updates and decrement free_count
+				  end if;
+				  cm_timecount := 0;                               -- here in this part the time counter is  Reset . 
+				  cm_counter := 0;                                 -- here in this part the counter is  Reset . 
+			 END IF;
+			 IF(sensor_pw_prev(placement) = '0' AND sensor_pw(placement) = '1' AND distances(placement) > "00000000" AND (placement + 1) <= guest_count) then        -- here in this part the if condition is going to check three things:    THE FIRST ONE IS :The previous state of the sensor at the specified location was '0'   THE SECOND ONE IS :The current state of the sensor at the specified location is '1'.    THE THIRD ONE :The distance at the current location is greater than "00000000" (non-zero)       THE LAST ONE IS :  The next location (placement + 1) is within the total guest count range (guest_count).
+
+				 carexist(placement) <= '0';                        -- here  Sets an indicator (carexist) to '0'.
+				 occupy(placement) <= '0';                          -- here in this part Sets another indicator (occupy) to '0'.
+				 led(placement) <= '1';                             -- here in this part Turns on the LED at the current location.
+				 free_count <= free_count + 1;                      -- here in this part Increments the free count.
+				 occupied_count <= occupied_count - 1;              -- here in this part Decrements the occupied count. 
+		    END IF;
+		 if (temperature > 300) then                                        -- here in this part it will Checks if the temperature is greater than 300 (a threshold for fire detection).
+                fire <= '1';                                                        -- if true   sets the fire indicator to '1', indicating a potential fire
+            else
+                fire <= '0';                                                        -- If false  sets the fire indicator to '0', indicating no fire.
+            end if;
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+ -if (coffee_button = '1') then                          -- here this part will check If the coffee button is pressed ('1'), do the following
+			 current_drink <= "000";         --Set the current drink to coffee ("000").
+			 coffee_ready <= '1';            --Set the coffee ready indicator to true ('1')
+		         hot_chocolate_ready <= '0';     --Set other drink ready indicators to false ('0').
+		         ice_cream_ready <= '0';         --Set other drink ready indicators to false ('0').
+			 water_ready <= '0';             --Set other drink ready indicators to false ('0').
+
+	     elsif (hot_chocolate_button = '1') then     --If the hot chocolate button is pressed ('1'), do the following:
+			 current_drink <= "001";         --Set the current drink to hot chocolate ("001").
+	        	 coffee_ready <= '0';            --Set other drink ready indicators to false ('0')
+		 	 hot_chocolate_ready <= '1';     --Set the hot chocolate ready indicator to true ('1')
+		 	 ice_cream_ready <= '0';         --Set other drink ready indicators to false ('0')
+	         	 water_ready <= '0';             --Set other drink ready indicators to false ('0')
+
+
+             elsif (ice_cream_button = '1') then         --If the ice cream button is pressed ('1'), do the following:
+			 current_drink <= "010";         --Set the current drink to ice cream ("010").
+			 coffee_ready <= '0';            --Set other drink ready indicators to false ('0').
+		 	 hot_chocolate_ready <= '0';     --Set other drink ready indicators to false ('0').
+			 ice_cream_ready <= '1';         --Set the ice cream ready indicator to true ('1').
+			 water_ready <= '0';             --Set other drink ready indicators to false ('0').
+
+
+	elsif (water_button = '1') then                  --If the water button is pressed ('1'), do the following:
+			 current_drink <= "011";         --Set the current drink to water ("011").
+			 coffee_ready <= '0';            --Set other drink ready indicators to false ('0').
+		 	 hot_chocolate_ready <= '0';     --Set other drink ready indicators to false ('0').
+			 ice_cream_ready <= '0';         --Set other drink ready indicators to false ('0').
+			 water_ready <= '1';             --Set the water ready indicator to true ('1')
+
+
+				else
+					 -- no button was pressed, so keep the current drink selection and ready indicators unchanged
+					 coffee_ready <= coffee_ready;
+					 hot_chocolate_ready <= hot_chocolate_ready;
+					 ice_cream_ready <= ice_cream_ready;
+					 water_ready <= water_ready;
+				end if;
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+ -- calculate and output change amount based on money received       // here this part the vending machine will see if the customer need a specfic drink and the customer enrer the money to the machine and the price of the selected drink will be saved in the change_amount 
+            case current_drink is 
+                when "000" =>                                        // here this part the drink is saved in the form of binary number  (( for example the manger of the vending machine saved the coffee code inside the machine by 000 ))
+                    if (money_received = '1') then                   // here this part the vending will see if the customer enter money to the machine or not  
+                        change_amount <= coffee_price;               // here this part the price of the selected drink will be saved in the variable change_amount 
+                    end if;
+                when "001" =>                                        // here this part the drink is saved in the form of binary number  (( for example the manger of the vending machine saved the coffee code inside the machine by 001))
+                    if (money_received = '1') then                   // here this part the vending will see if the customer enter money to the machine or not
+                        change_amount <= hot_chocolate_price;        // here this part the price of the selected drink will be saved in the variable change_amount 
+                    end if;
+                when "010" =>                                        // here this part the drink is saved in the form of binary number  (( for example the manger of the vending machine saved the coffee code inside the machine by 010))
+                    if (money_received = '1') then                   // here this part the vending will see if the customer enter money to the machine or not
+                        change_amount <= ice_cream_price;            // here this part the price of the selected drink will be saved in the variable change_amount 
+                    end if;
+                when "011" =>                                         // here this part the drink is saved in the form of binary number  (( for example the manger of the vending machine saved the coffee code inside the machine by 010))
+                    if (money_received = '1') then                    // here this part the vending will see if the customer enter money to the machine or not
+                        change_amount <= water_price;                 // here this part the price of the selected drink will be saved in the variable change_amount 
+                    end if;
+                when others =>
+                    change_amount <= 0;
+            end case;
+     END IF;
+    END PROCESS;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+  
+
+
+-- output indicating whether the garage is full
+    process (guest_count)                                // this part the parking system data based will see if the number of car which is found in the parking system is equal to the number of slots which is founf in the parking (( fo exxample if the parking contain 5 slots and there is 5 car in the parking so the parking system will set the variable (( full_out )) =1 this mean that the parking is full with car 
+    begin
+    full_out <= '0';                                     // here this part will set the variable full_out to 0
+        if guest_count = max_guests then                 // here this part if the number of customer found in the parking is equal to  number of slots in the parking 
+            full_out <= '1';                             // here he will set the variable full_out to 1
+        end if;
+    end process;
+
+
+
+  
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+	 ------------------------------------------------------------ 7 line found lin 7 segment indicate to the space number of 
+________________________________________________SEG 2 in the left side______________________________________________________________
+________________________________________________SEG   in the right side______________________________________________________________
+	 process (free_count)
+	 begin
+			if (free_count = 0) then
+				 seg <= "1111110";
+				 seg2 <= "1111110";
+				elsif (free_count = 1) then
+				seg<="0110000";
+				seg2 <= "1111110";
+				elsif (free_count = 2) then
+				seg<="1101101";
+				seg2 <= "1111110";
+				elsif (free_count = 3) then
+				seg<="1111001";
+				seg2 <= "1111110";
+				elsif (free_count = 4) then
+				seg<="0110011";
+				seg2 <= "1111110";
+				elsif (free_count = 5) then
+				seg<="1011111";
+				seg2 <= "1111110";
+				elsif (free_count = 6) then
+				seg<="1011111";
+				seg2 <= "1111110";
+				elsif (free_count = 7) then
+				seg<="1110000";
+				seg2 <= "1111110";
+				elsif (free_count = 8) then
+				seg<="1111111";
+				seg2 <= "1111110";
+				elsif (free_count = 9) then
+				seg<="1111011";
+				seg2 <= "1111110";
+				elsif (free_count = 10) then
+				 seg <= "1111110";
+				 seg2<="0110000";
+				elsif (free_count = 11) then
+				seg<="0110000";
+				seg2<="0110000";
+				elsif (free_count = 12) then
+				seg<="1101101";
+				seg2<="0110000";
+				elsif (free_count = 13) then
+				seg<="1111001";
+				seg2<="0110000";
+				elsif (free_count = 14) then
+				seg<="0110011";
+				seg2<="0110000";
+				elsif (free_count = 15) then
+				seg<="1011111";
+				seg2<="0110000";
+				elsif (free_count = 16) then
+				seg<="1011111";
+				seg2<="0110000";
+				elsif (free_count = 17) then
+				seg<="1110000";
+				seg2<="0110000";
+				elsif (free_count = 18) then
+				seg<="1111111";
+				seg2<="0110000";
+				elsif (free_count = 19) then
+				seg<="1111011";
+				seg2<="0110000";
+				elsif (free_count = 20) then
+				 seg <= "1111110";
+				 seg2<="1101101";
+				elsif (free_count = 21) then
+				seg<="0110000";
+				seg2<="1101101";
+				elsif (free_count = 22) then
+				seg<="1101101";
+				seg2<="1101101";
+				elsif (free_count = 23) then
+				seg<="1111001";
+				seg2<="1101101";
+				elsif (free_count = 24) then
+				seg<="0110011";
+				seg2<="1101101";
+				elsif (free_count = 25) then
+				seg<="1011111";
+				seg2<="1101101";
+				elsif (free_count = 26) then
+				seg<="1011111";
+				seg2<="1101101";
+				elsif (free_count = 27) then
+				seg<="1110000";
+				seg2<="1101101";
+				elsif (free_count = 28) then
+				seg<="1111111";
+				seg2<="1101101";
+				elsif (free_count = 29) then
+				seg<="1111011";
+				seg2<="1101101";
+				elsif (free_count = 30) then
+				 seg <= "1111110";
+				 seg2<="1111001";
+				elsif (free_count = 31) then
+				seg<="0110000";
+				seg2<="1111001";
+				elsif (free_count = 32) then
+				seg<="1101101";
+				seg2<="1111001";
+				elsif (free_count = 33) then
+				seg<="1111001";
+				seg2<="1111001";
+				elsif (free_count = 34) then
+				seg<="0110011";
+				seg2<="1111001";
+				elsif (free_count = 35) then
+				seg<="1011111";
+				seg2<="1111001";
+				elsif (free_count = 36) then
+				seg<="1011111";
+				seg2<="1111001";
+				elsif (free_count = 37) then
+				seg<="1110000";
+				seg2<="1111001";
+				elsif (free_count = 38) then
+				seg<="1111111";
+				seg2<="1111001";
+				elsif (free_count = 39) then
+				seg<="1111011";
+				seg2<="1111001";
+				elsif (free_count = 40) then
+				 seg <= "1111110";
+				 seg2<="0110011";
+				elsif (free_count = 41) then
+				seg<="0110000";
+				seg2<="0110011";
+				elsif (free_count = 42) then
+				seg<="1101101";
+				seg2<="0110011";
+				elsif (free_count = 43) then
+				seg<="1111001";
+				seg2<="0110011";
+				elsif (free_count = 44) then
+				seg<="0110011";
+				seg2<="0110011";
+				elsif (free_count = 45) then
+				seg<="1011111";
+				seg2<="0110011";
+				elsif (free_count = 46) then
+				seg<="1011111";
+				seg2<="0110011";
+				elsif (free_count = 47) then
+				seg<="1110000";
+				seg2<="0110011";
+				elsif (free_count = 48) then
+				seg<="1111111";
+				seg2<="0110011";
+				elsif (free_count = 49) then
+				seg<="1111011";
+				seg2<="0110011";
+				elsif (free_count = 50) then
+				 seg <= "1111110";
+				 seg2<="1011111";
+				end if;
+end process;                                                                                                                                                                                                          
