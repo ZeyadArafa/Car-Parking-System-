@@ -1,12 +1,6 @@
 VHDL Car-parking-system
 
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-Here’s the updated README with your GitHub username:
-
----
-
 # College Parking System with VHDL
 
 This repository contains a VHDL-based implementation of a college parking system that integrates vehicle management, a ticketing system, fire detection, and a vending machine for drinks. The system supports 50 parking spaces and offers both student/staff ID validation and guest ticketing, ensuring smooth management of the parking facility.
